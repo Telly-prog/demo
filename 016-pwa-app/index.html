@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>016-pwa-app</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <link rel="manifest" href="manifest.json">
+  <style>
+  </style>
+</head>
+
+<body>
+  <div>这是一个PWA应用</div>
+  <script type="text/javascript" src="https://storage.googleapis.com/workbox-cdn/releases/3.1.0/workbox-sw.js"></script>
+  <script type="text/javascript">
+
+  // 检测浏览器是否支持SW
+  if (navigator.serviceWorker != null) {
+    navigator.serviceWorker.register('sw.js')
+      .then(function(registartion) {
+        console.log('支持sw:', registartion.scope)
+      })
+  }
+
+  </script>
+</body>
+
+</html>

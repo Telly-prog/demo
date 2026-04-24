@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="Author" content="">
+  <meta name="Keywords" content="">
+  <meta name="Description" content="">
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="format-detection" content="telephone=no" />
+  <title>001-webgl-multpointsize</title>
+  <style type="text/css">
+  * {
+    padding: 0;
+    margin: 0;
+  }
+
+  </style>
+</head>
+
+<body>
+  <canvas id="cavs" width="500" height="500">您的浏览器不支持canvas元素！</canvas>
+  <!-- webgl lib -->
+  <script src="../../assets/webgl-lib/webgl-utils.js"></script>
+  <script src="../../assets/webgl-lib/webgl-debug.js"></script>
+  <script src="../../assets/webgl-lib/cuon-utils.js"></script>
+  <script src="../../assets/webgl-lib/cuon-matrix.js"></script>
+  <script type="text/javascript">
+  var cavs = document.getElementById('cavs');
+  var gl = getWebGLContext(cavs);
+  gl.clearColor(0, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  var POINT_SOURCE =
+    'attribute vec4 a_Position;' +
+    'attribute vec4 a_Color;' +
+    'varying vec4 v_Color;' +
+    'void main(){' +
+    'gl_Position = a_Position;' +
+    'gl_PointSize = 10.0;' +
+    'v_Color = a_Color;' +
+    '}';
+  var FRAG_SOUCE =
+    'precision mediump float;' +
+    'varying vec4 v_Color;' +
+    'void main(){' +
+    'gl_FragColor = v_Color;' +
+    '}';
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  var bufData = new Float32Array([
+    0.5, 0.5, 1.0, 0.0, 0.0,
+    -0.5, 0.5, 0.0, 1.0, 0.0,
+    0.0, -0.5, 0.0, 0.0, 1.0
+  ]);
+  var FSIZE = bufData.BYTES_PER_ELEMENT;
+  console.log(FSIZE);
+  var init = initShaders(gl, POINT_SOURCE, FRAG_SOUCE);
+  gl.bufferData(gl.ARRAY_BUFFER, bufData, gl.STATIC_DRAW);
+  var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+  var a_Color = gl.getAttribLocation(gl.program, 'a_Color');
+  gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, FSIZE * 5, 0);
+  gl.vertexAttribPointer(a_Color, 3, gl.FLOAT, false, FSIZE * 5, FSIZE * 2);
+  gl.enableVertexAttribArray(a_Position);
+  gl.enableVertexAttribArray(a_Color);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  // gl.drawArrays(gl.LINE_LOOP, 0,  3);
+
+  </script>
+</body>
+
+</html>

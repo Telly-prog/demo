@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>008-maze-game</title>
+  <!-- Vue -->
+  <script type="text/javascript" src="https://cdn.staticfile.org/vue/2.6.10/vue.min.js"></script>
+  <!-- ElementUI -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.staticfile.org/element-ui/2.7.2/theme-chalk/index.css">
+  <script type="text/javascript" src="https://cdn.staticfile.org/element-ui/2.8.2/index.js"></script>
+  <style> * {
+    margin: 0;
+    padding: 0;
+  }
+  #app {
+    position: relative;
+    width: 600px;
+    margin: 0 auto;
+  }
+  .maz-container{
+    width: 600px;
+    margin-top: 50px;
+  }
+  .row {
+    overflow: hidden;
+  }
+  .square {
+    margin: 2px;
+    width: 20px;
+    height: 20px;
+    float: left;
+  }
+  .square-1 {
+    background: #f5f5f5;
+  }
+  .square-2 {
+    background: #ccc;
+  }
+  .square-3 {
+    background:#ff4949
+  }
+  .operation{
+    position: absolute;
+    right: 10px;
+    top: 180px;
+    text-align: center;
+  }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="maz-container">
+      <template v-for="(row,r) in pathMapArr">
+        <div class="row">
+          <template v-for="(col,c) in row">
+            <div @click="trigger(r,c)" style="display: inline-block;">
+              <div v-if="pathMapArr[r][c]==0" class="square square-1"></div>
+              <div v-if="pathMapArr[r][c]==1" class="square square-2"></div>
+              <div v-if="pathMapArr[r][c]==2" class="square square-3"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+    <div class="operation">
+      <el-button type="primary" :disabled="startDisabled" @click="start">开始</el-button>
+    </div>
+  </div>
+</body>
+<script>
+new Vue({
+  el: "#app",
+  data: {
+    mapArr: [],
+    pathMapArr: [],
+    pathArr: [],
+    gonePointArr: [],
+    finished: false,
+    startDisabled: false,
+    found: false,
+    startPoint: [0, 0],
+    cP: [0, 0],
+    rM: 0,
+    cM: 0,
+    sencond: 50
+  },
+  methods: {
+    // trigger(r, c) {
+    //   this.mapArr[r][c] = this.mapArr[r][c] == 0 ? 1 : 0;
+    //   this.renderPath([]);
+    // },
+    doFind() {
+      /**
+       * 上下左右四点
+       * @type {Array}
+       */
+      let pAround = [
+        [this.cP[0] - 1, this.cP[1]],
+        [this.cP[0], this.cP[1] + 1],
+        [this.cP[0] + 1, this.cP[1]],
+        [this.cP[0], this.cP[1] - 1],
+      ]
+      let go = false;
+      for (let testP of pAround) {
+        let checkCanGo_ = this.checkCanGo(testP);
+        let checkGone_ = this.checkGone(testP);
+        if (this.checkCanGo(testP) && !this.checkGone(testP)) {
+          //可以前进
+          this.gonePointArr.push(testP);
+          this.pathArr.push(this.clone(testP));
+          this.cP = testP;
+          go = true;
+          break;
+        }
+      }
+      if (!go) {
+        if (this.checkCantFind(this.cP)) {
+          console.log('cant find end');
+          this.finished = true;
+        } else if (this.checkEnd(this.cP)) {
+          console.log('found end !');
+          this.found = true;
+          this.finished = true;
+        } else { //回退
+          this.pathArr.pop();
+          this.cP = this.pathArr[this.pathArr.length - 1];
+        }
+      }
+      this.renderPath(this.pathArr);
+      if (!this.finished) {
+        setTimeout(() => {
+          this.doFind();
+        }, this.sencond)
+      } else {
+        this.startDisabled = false;
+        this.cP = [0, 0];
+        this.pathArr = [];
+        this.gonePointArr = [];
+        this.finished = false;
+      }
+    },
+    start() {
+      this.startDisabled = true;
+      this.rM = this.mapArr.length - 1;
+      this.cM = this.mapArr[0].length - 1;
+      this.pathArr.push(this.startPoint);
+      this.gonePointArr.push(this.startPoint);
+      this.renderPath(this.pathArr);
+      if (!this.finished) setTimeout(() => {
+        this.doFind();
+      }, this.sencond)
+    },
+    /**
+     * 创建新迷宫
+     * @return {[type]} [description]
+     */
+    newMaze() {
+      this.mapArr = [
+        [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1],
+        [0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1],
+        [0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0],
+        [1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+        [1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1],
+        [1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0],
+        [0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0],
+        [0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1],
+        [1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0],
+        [0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0],
+        [0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1],
+        [0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0],
+        [0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0],
+      ]
+    },
+    renderPath(pathArr) {
+      let map = this.clone(this.mapArr)
+      for (let item of pathArr) {
+        map[item[0]][item[1]] = "2";
+      }
+      this.pathMapArr = map;
+    },
+    checkCanGo(pos) {
+      if (this.mapArr[pos[0]] == undefined || this.mapArr[pos[0]][pos[1]] == undefined) return false;
+      return this.mapArr[pos[0]][pos[1]] == 0;
+    },
+    checkEnd(pos) {
+      return pos[0] == this.rM && pos[1] == this.cM;
+    },
+    checkGone(pos) {
+      if (!pos) return;
+      for (let item of this.gonePointArr) {
+        if (item.toString() == pos.toString()) return true;
+      }
+    },
+    checkCantFind(pos) {},
+    clone(obj) {
+      return JSON.parse(JSON.stringify(obj))
+    },
+  },
+  mounted() {
+    this.newMaze();
+    this.renderPath([])
+  }
+})
+</script>
+
+</html>

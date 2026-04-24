@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>012-scr-people-grow</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <!-- JQuery -->
+  <script type="text/javascript" src="https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js"></script>
+  <!-- Echarts -->
+  <script type="text/javascript" src="https://cdn.staticfile.org/echarts/4.2.1/echarts.common.min.js"></script>
+  <script type="text/javascript" src="./echarts-theme.js"></script>
+  <!-- Moment -->
+  <script type="text/javascript" src="https://cdn.staticfile.org/moment.js/2.24.0/moment.min.js"></script>
+  <style>
+  </style>
+</head>
+
+<body>
+  <div style="position: relative;width: 1000px;height: 600px;">
+    <div id="scPeopleGrowCanvasContaner" style="width: 100%;height:100%"></div>
+    <div style="position: absolute;left:80px;top:60px;z-index: 99;font-size: 16px;">平均日增长： <span style="color: #188eee;font-weight: bold" id="perday"></span> 人次</div>
+    <div style="position: absolute;right:30px;top:60px;z-index: 99;font-size: 16px;">当前： <span style="color: #188eee;font-weight: bold" id="number"></span> 人次</div>
+  </div>
+</body>
+<script>
+$(document).ready(function() {
+  $.getJSON('data.json', function(data) {
+    showFigure(data);
+  })
+});
+
+function showFigure(tableData) {
+  var that = this;
+  var echData = (function(originData) {
+    //原数据转化对象
+    var originDataObj = {};
+    var echData = [];
+    for (var d of originData) {
+      originDataObj[d.date] = d.number;
+    }
+    //遍历开始到结束的日期
+    var startD = originData[0].date;
+    var endD = originData[originData.length - 1].date;
+    $('#number').text(originData[originData.length - 1].number);
+    var distance = new moment(endD).diff(new moment(startD), "days");
+    $('#perday').text(((originData[originData.length - 1].number - originData[0].number) / distance).toFixed(2));
+    for (var i = 0; i < distance + 1; i++) {
+      var date_ = new moment(startD).add(i, 'days').format('YYYY-MM-DD');
+      echData.push({
+        date: date_,
+        value: originDataObj[date_] || "",
+      });
+    }
+    return echData;
+  })(tableData);
+  // 基于准备好的dom，初始化echarts实例
+  var myChart = echarts.init(document.getElementById('scPeopleGrowCanvasContaner'), 'walden');
+  // 指定图表的配置项和数据
+  var option = {
+    grid: {
+      left: 50,
+      bottom: 40,
+      top: 20,
+      right: 20
+    },
+    xAxis: {
+      type: 'category',
+      data: function(echData) {
+        var arr = [];
+        for (var i of echData) {
+          arr.push(new moment(i.date).format("YY.MM.DD"));
+        }
+        return arr;
+      }(echData)
+    },
+    yAxis: {
+      type: 'value'
+    },
+    series: [{
+      label: {
+        show: true,
+        // formatter: function(params) {}
+      },
+      data: function(echData) {
+        var arr = [];
+        for (var i of echData) {
+          arr.push(i.value);
+        }
+        return arr;
+      }(echData),
+      type: 'line',
+      connectNulls: true
+    }]
+  };
+  // 使用刚指定的配置项和数据显示图表。
+  myChart.setOption(option);
+}
+</script>
+
+</html>

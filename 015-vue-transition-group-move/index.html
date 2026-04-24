@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>015-vue-transition-group-move</title>
+  <!-- Vue -->
+  <script type="text/javascript" src="https://cdn.staticfile.org/vue/2.6.10/vue.min.js"></script>
+  <!-- ElementUI -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.staticfile.org/element-ui/2.7.2/theme-chalk/index.css">
+  <style>
+  * {
+    margin: 0;
+    padding: 0;
+  }
+  #app {
+    position: relative;
+    width: 600px;
+    margin: 0 auto;
+  }
+  .container {
+    position: relative;
+    overflow: hidden;
+    width: 450px;
+    padding: 20px;
+  }
+  .box {
+    width: 45px;
+    height: 45px;
+    border: 1px solid #ccc;
+    line-height: 45px;
+    text-align: center;
+    border-radius: 4px;
+    float: left;
+    box-sizing: border-box;
+    background: #fff;
+  }
+  .box-move {
+    transition: transform 1.2s;
+  }
+  .btn {
+    position: absolute;
+    top: 225px;
+    left: 500px;
+  }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="container">
+      <transition-group name="box">
+        <div class="box" v-for="(item,index) in boxList" :key="item">{{item}}</div>
+      </transition-group>
+    </div>
+    <button class="btn el-button el-button--primary el-button--large" @click="exchangeBoxes">切换</button>
+  </div>
+</body>
+<script>
+new Vue({
+  el: "#app",
+  data: {
+    boxList: (function() {
+      let b = [];
+      for (let i = 0; i < 100; i++) {
+        b.push(i);
+      }
+      return b;
+    })()
+  },
+  methods: {
+    // 替换box位置（随机一半位置替换）
+    exchangeBoxes: function() {
+      let boxs = this.boxList,
+        l = boxs.length,
+        half = Math.floor(l / 2),
+        c1 = [],
+        c2 = [];
+      // 设置被替换位置数组
+      do {
+        let index = Math.floor(Math.random() * l);
+        if (c1.indexOf(index) == -1) c1.push(index);
+      } while (c1.length != half);
+      // 设置替换位置数组
+      for (let i = 0; i < l; i++) {
+        if (c1.indexOf(i) == -1) {
+          c2.push(i)
+        }
+        if (c2.length == half) break;
+      }
+      // 进行替换
+      for (let j = 0; j < half; j++) {
+        let temp = boxs[c1[j]];
+        boxs[c1[j]] = boxs[c2[j]];
+        boxs[c2[j]] = temp;
+      }
+      this.boxList = JSON.parse(JSON.stringify(boxs));
+    }
+  }
+})
+</script>
+
+</html>

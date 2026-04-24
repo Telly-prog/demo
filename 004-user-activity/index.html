@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>userActivity</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <script type="text/javascript" src="../../assets/d3-lib/d3-v5.0.0.min.js"></script>
+  <script type="text/javascript" src="../../assets/d3-lib/d3-sankey.min.js"></script>
+  <style>
+  body {
+    margin: 0;
+  }
+  svg {
+    margin: 10px;
+  }
+  .belt {
+    stroke: #000;
+    stroke-opacity: 0.2;
+  }
+  .belt-hover {
+    stroke: #188eee;
+    stroke-opacity: 0.5;
+  }
+  </style>
+</head>
+
+<body>
+  <svg width="800" height="600"></svg>
+  <script type="text/javascript">
+  var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height"),
+    color = d3.scaleOrdinal(d3.schemeCategory10);
+  var sankey = d3.sankey().nodeAlign(d3.sankeyRight).nodeWidth(15).nodePadding(10).extent([
+    [1, 1],
+    [width - 1, height - 6]
+  ]).iterations(0);
+  var link = svg.append("g").attr("class", "links").attr("fill", "none").classed('belt', true).selectAll("path");
+  var node = svg.append("g").attr("class", "nodes").attr("font-family", "sans-serif").attr("font-size", 10).selectAll("g");
+  d3.json('./data.json', { RequestMode: "navigate" }).then(function(energy, error) {
+    sankey(energy);
+    link = link.data(energy.links).enter().append('g');
+    var belts = link.append("path").attr("d", d3.sankeyLinkHorizontal()).attr("stroke-width", function(d) { return Math.max(1, d.width); });
+    belts.append("title").text(function(d) {
+      return d.value;
+    });
+    node = node.data(energy.nodes).enter().append("g");
+    var rects = node.append("rect").attr("x", function(d) { return d.x0; }).attr("y", function(d) { return d.y0; }).attr("height", function(d) { return d.y1 - d.y0; }).attr("width", function(d) { return d.x1 - d.x0; }).attr("fill", function(d) { return color(d.type); }).attr("stroke", "#000");
+    var typeTexts = node.append("text").attr("x", function(d) { return d.x0 - 6; }).attr("y", function(d) { return (d.y1 + d.y0) / 2; }).attr("dy", "0.0em").attr("text-anchor", "end").text(function(d) { return d.name; }).filter(function(d) { return d.x0 < width / 2; }).attr("x", function(d) { return d.x1 + 6; }).attr("text-anchor", "start");
+    var valueTexts = node.append("text").attr("x", function(d) { return d.x0 - 6; }).attr("y", function(d) { return (d.y1 + d.y0) / 2; }).attr("dy", "1.5em").attr("text-anchor", "end").text(function(d) { return d.value; }).filter(function(d) { return d.x0 < width / 2; }).attr("x", function(d) { return d.x1 + 6; }).attr("text-anchor", "start");
+    addEventListener(); //hover事件监听
+    function addEventListener() {
+      rects.on('mouseover', function(d) {
+        var relativeLinksArr = getIndexArray(d.sourceLinks, d.targetLinks);
+        belts.filter(function(d) { return relativeLinksArr.indexOf(d.index) != -1; }).classed('belt-hover', true);
+      }).on('mouseleave', function(d) {
+        var relativeLinksArr = getIndexArray(d.sourceLinks, d.targetLinks);
+        belts.filter(function(d) { return relativeLinksArr.indexOf(d.index) != -1; }).classed('belt-hover', false);
+      });
+      belts.on('mouseover', function(d, idx) {
+        belts.filter(function(d) { return d.index == idx; }).classed('belt-hover', true);
+      }).on('mouseleave', function(d, idx) {
+        belts.filter(function(d) { return d.index == idx; }).classed('belt-hover', false);
+      });
+    }
+    //获取index数组
+    function getIndexArray(sourceLinks, targetLinks) {
+      var arr = [];
+      for (var i = 0; i < sourceLinks.length; i++) arr.push(sourceLinks[i].index);
+      for (var i = 0; i < targetLinks.length; i++) arr.push(targetLinks[i].index);
+      return arr;
+    }
+  });
+  </script>
+</body>
+
+</html>

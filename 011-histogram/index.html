@@ -1,0 +1,148 @@
+<!DOCTYPE>
+
+<head>
+  <title>011-histogram</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <style type="text/css">
+  * {
+    margin: 0;
+    padding: 0;
+  }
+  html,body{
+    overflow: auto;
+  }
+  .data-lenth-title {
+    margin-top: 20px;
+    text-align: center;
+    line-height: 20px;
+    font-size: 14px;
+  }
+  #dataLength {
+    text-align: left;
+    font-size: 24px;
+    font-weight: bold;
+    display: inline-block;
+    width: 100px;
+    color: #188eee;
+    margin-left: 20px;
+    vertical-align: middle;
+  }
+  .svgbox {
+    width: 50%;
+    float: left;
+    text-align: center;
+    margin-top: 20px;
+  }
+  svg {
+    display: inline-block;
+  }
+  #inputRange {
+    width: 90%;
+    display: block;
+    margin: 0 auto 20px;
+  }
+  </style>
+</head>
+
+<body>
+  <div>
+    <div class="data-lenth-title">样本数量<span id="dataLength">0</span></div>
+    <div class="svgbox">
+      <svg id="svgU"></svg>
+      <br>
+      <span>均匀分布</span>
+    </div>
+    <div class="svgbox">
+      <svg id="svgN"></svg>
+      <br>
+      <span>正太分布</span>
+    </div>
+  </div>
+  <input id="inputRange" max="10000" type="range" name="" value="0">
+  <script type="text/javascript" src="https://cdn.staticfile.org/d3/5.7.0/d3.min.js"></script>
+  <script type="text/javascript">
+  var svgWidth = 480,
+    svgHeight = 450,
+    svgU = d3.select('#svgU'), //Uniform 均匀分布
+    svgN = d3.select('#svgN'), //Normal 正太分布
+    inputRangeDom = document.getElementById('inputRange'), //滚动条
+    dataLengthDom = document.getElementById('dataLength'), //样品数量
+    dataU = [],
+    dataN = [],
+    randomU = d3.randomUniform(100),
+    randomN = d3.randomNormal(10, 20),
+    scaleX = d3.scaleLinear(), //x轴线性比例尺
+    scaleY = d3.scaleLinear(), //y轴线性比例尺
+    histog = d3.histogram(), //y轴线性比例尺
+    bandScale = d3.scaleBand(),
+    n = 100, //系统默认添加 100*5条数据
+    t = 0
+  svgU.attr('width', svgWidth).attr('height', svgHeight);
+  svgN.attr('width', svgWidth).attr('height', svgHeight);
+  //自动添加数据
+  var interval = setInterval(function() {
+    t++;
+    for (var j = 0; j < 5; j++) {
+      dataU.push(randomU());
+      dataN.push(randomN());
+    }
+    setRangeInput(t);
+    renderData(dataU, 'U');
+    renderData(dataN, 'N');
+    if (t >= n) {
+      clearInterval(interval);
+    }
+  }, 15)
+  // 监听滚动
+  bindEvent();
+
+  function renderData(data, type) {
+    var max = d3.max(data);
+    var extent = d3.extent(data);
+    scaleX.domain(extent).range([0, svgWidth])
+    var ticks = scaleX.ticks(100);
+    histog.domain(scaleX.domain()).thresholds(ticks)
+    var anaData = histog(data);
+    var maxlength = d3.max(anaData, d => d.length);
+    scaleY.domain([0, maxlength]).range([0, svgHeight]);
+    bandScale.domain(d3.range(anaData.length)).range([0, svgWidth]);
+    var bandWidth = bandScale.bandwidth();
+    if (type == "U") {
+      svgU.selectAll("rect").data(anaData).exit().remove();
+      svgU.selectAll("rect").data(anaData).enter().append('rect');
+      svgU.selectAll("rect").attr('fill', '#188eee').attr('x', (d, i) => { return bandScale(i) }).attr('width', (d, i) => { return bandWidth - 1 }).attr('y', d => { return svgHeight - scaleY(d.length) }).attr('height', d => { return scaleY(d.length) });
+    }
+    if (type == "N") {
+      svgN.selectAll("rect").data(anaData).exit().remove()
+      svgN.selectAll("rect").data(anaData).enter().append('rect')
+      svgN.selectAll("rect").attr('fill', '#188eee').attr('x', (d, i) => { return bandScale(i) }).attr('width', (d, i) => { return bandWidth - 1 }).attr('y', d => { return svgHeight - scaleY(d.length) }).attr('height', d => { return scaleY(d.length) });
+    }
+  }
+
+  function setRangeInput(t) {
+    inputRangeDom.value = t;
+    dataLengthDom.innerText = inputRangeDom.value * 10;
+  }
+
+  function setDataLength() {
+    dataLengthDom.innerText = 100;
+  }
+
+  function bindEvent() {
+    inputRangeDom.oninput = function() {
+      dataLengthDom.innerText = inputRangeDom.value * 10;
+      if (inputRangeDom.value * 10 <= dataU.length) {
+        renderData(dataU.slice(0, inputRangeDom.value * 10), 'U');
+        renderData(dataN.slice(0, inputRangeDom.value * 10), 'N');
+      } else {
+        for (var j = 0; j < inputRangeDom.value * 10 - dataU.length; j++) {
+          dataU.push(randomU());
+          dataN.push(randomN());
+        }
+        renderData(dataU, 'U');
+        renderData(dataN, 'N');
+      }
+    }
+  }
+  </script>
+</body>

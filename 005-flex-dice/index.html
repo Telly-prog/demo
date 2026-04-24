@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>005-flex-dice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <style>
+  * {
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    background: #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 400px;
+  }
+  .dice-box {
+    width: 420px;
+  }
+  .dice {
+    margin: 10px;
+    padding: 10px;
+    display: flex;
+    background: #fff;
+    box-sizing: content-box;
+    width: 100px;
+    height: 100px;
+    border-radius: 10px;
+    float: left;
+  }
+  .item {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #000;
+  }
+  /*dice1*/
+
+  .dice1 {
+    justify-content: center;
+    align-items: center;
+  }
+  /*dice2*/
+
+  .dice2 {
+    justify-content: space-between;
+    align-items: center;
+  }
+  /*dice3*/
+
+  .dice3 {
+    justify-content: space-between;
+  }
+  .dice3 .item2 {
+    align-self: center;
+  }
+  .dice3 .item3 {
+    align-self: flex-end;
+  }
+  /*dice4*/
+
+  .dice4 {
+    flex-wrap: wrap;
+  }
+  .dice4 .column {
+    flex-basis: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+  .dice4 .column2 {
+    align-items: flex-end
+  }
+  /*dice5*/
+
+  .dice5 {
+    flex-wrap: wrap;
+  }
+  .dice5 .column {
+    flex-basis: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+  .dice5 .column2 {
+    justify-content: center;
+  }
+  .dice5 .column3 {
+    align-items: flex-end
+  }
+  /*dice6*/
+
+  .dice6 {
+    flex-wrap: wrap;
+  }
+  .dice6 .column {
+    flex-basis: 100%;
+    display: flex;
+    justify-content: space-around;
+  }
+  .dice6 .column2 {
+    align-items: center;
+  }
+  .dice6 .column3 {
+    align-items: flex-end
+  }
+  </style>
+</head>
+
+<body>
+  <div class="dice-box">
+    <div class="dice dice1">
+      <div class="item item1"></div>
+    </div>
+    <div class="dice dice2">
+      <div class="item item1"></div>
+      <div class="item item2"></div>
+    </div>
+    <div class="dice dice3">
+      <div class="item item1"></div>
+      <div class="item item2"></div>
+      <div class="item item3"></div>
+    </div>
+    <div class="dice dice4">
+      <div class="column">
+        <div class="item item1"></div>
+        <div class="item item2"></div>
+      </div>
+      <div class="column column2">
+        <div class="item item3"></div>
+        <div class="item item4"></div>
+      </div>
+    </div>
+    <div class="dice dice5">
+      <div class="column">
+        <div class="item item1"></div>
+        <div class="item item2"></div>
+      </div>
+      <div class="column column2">
+        <div class="item item3"></div>
+      </div>
+      <div class="column column3">
+        <div class="item item4"></div>
+        <div class="item item5"></div>
+      </div>
+    </div>
+    <div class="dice dice6">
+      <div class="column">
+        <div class="item item1"></div>
+        <div class="item item2"></div>
+      </div>
+      <div class="column column2">
+        <div class="item item3"></div>
+        <div class="item item4"></div>
+      </div>
+      <div class="column column3">
+        <div class="item item5"></div>
+        <div class="item item6"></div>
+      </div>
+    </div>
+    <div style="clear: both;"></div>
+  </div>
+</body>
+
+</html>

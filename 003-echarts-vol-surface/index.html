@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>003-echarts-vol-surface</title>
+  <style type="text/css">
+  * {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    height: 800px;
+  }
+
+  #canvas {
+    max-width: 2000px;
+    max-height: 2000px;
+  }
+
+  </style>
+</head>
+
+<body>
+  <div class="clearfloat">
+    <div id="canvas" style="width: 100%;height: 800px;"></div>
+  </div>
+  <script type="text/javascript" src="https://cdn.staticfile.org/jquery/3.4.1/jquery.min.js"></script>
+  <script type="text/javascript" src="https://cdn.staticfile.org/echarts/4.7.0/echarts.min.js"></script>
+  <script type="text/javascript" src="/dist/assets/echarts-gl/echarts-gl.min.js"></script>
+  <script type="text/javascript">
+  var myChart = echarts.init(document.getElementById('canvas'));
+  var c1 = "#000";
+  var c2 = "#fff";
+  var c3 = "#188eee";
+  var c4 = "rgba(255,255,255,.2)";
+  var nameTextStyle = (color) => ({
+    lineHeight: 18,
+    color: color
+  });
+
+  var zRange = [0.18, 0.42];
+
+  $.get('./data.json', function(data) {
+    var option = {
+      textStyle: {
+        // fontFamily: "Arial"
+      },
+      tooltip: {
+        formatter: function(params) {
+          return params.marker +
+            params.seriesName + "<br/>" +
+            "strike" + "：" + params.value[0] + "<br/>" +
+            "expiration" + "：" + params.value[1] + "<br/>" +
+            "volatility" + ": " + params.value[2];
+        }
+      },
+      legend: {
+        top: 70,
+        left: 100,
+        textStyle: {
+          color: c2
+        }
+      },
+      backgroundColor: c1,
+      visualMap: {
+        type: 'continuous',
+        textStyle: {
+          color: c2
+        },
+        itemHeight: 140,
+        calculable: true,
+        min: 0,
+        max: 1,
+        bottom: 50,
+        left: 30,
+        precision: 4,
+        inRange: {
+          color: null
+        },
+        outOfRange: {
+          color: null,
+          opacity: 0,
+        },
+        controller: {
+          inRange: {
+            color: c3
+          },
+          outOfRange: {
+            color: c2
+          },
+        }
+      },
+      xAxis3D: {
+        name: "strike",
+        type: 'category',
+        splitNumber: 12,
+        boundaryGap: false,
+        nameTextStyle: nameTextStyle(c2),
+        axisLabel: {
+          textStyle: {
+            color: c2
+          },
+          interval: 1,
+        },
+        axisLine: {
+          lineStyle: {
+            color: c2
+          }
+        },
+        axisTick: {
+          alignWithLabel: true,
+          interval: 1,
+        },
+        splitLine: {
+          lineStyle: {
+            color: c4
+          }
+        },
+        axisPointer: {
+          label: {
+            show: true,
+            margin: 0,
+            textStyle: {
+              color: c3
+            },
+          },
+          lineStyle: {
+            width: 1.5,
+            color: c3
+          }
+        }
+      },
+      yAxis3D: {
+        name: "expiration",
+        type: 'category',
+        nameTextStyle: nameTextStyle(c2),
+        min: 1,
+        axisLabel: {
+          textStyle: {
+            color: c2
+          },
+        },
+        axisLine: {
+          lineStyle: {
+            color: c2
+          },
+        },
+        axisTick: {
+          alignWithLabel: true,
+          interval: (index, value) => {
+            return !!value
+          }
+        },
+        splitLine: {
+          lineStyle: {
+            color: c4
+          }
+        },
+        boundaryGap: false,
+        axisPointer: {
+          label: {
+            textStyle: {
+              color: c3
+            },
+            show: true,
+            margin: 0,
+            formatter: (value) => {
+              return value
+            },
+          },
+          lineStyle: {
+            width: 1.5,
+            color: c3
+          }
+        }
+      },
+      zAxis3D: {
+        name: "volatility",
+        type: 'value',
+        nameTextStyle: nameTextStyle(c2),
+        axisLine: {
+          lineStyle: {
+            color: c2
+          }
+        },
+        axisLabel: {
+          textStyle: {
+            color: c2
+          },
+          margin: 5,
+        },
+        splitLine: {
+          lineStyle: {
+            color: c4
+          }
+        },
+        axisPointer: {
+          label: {
+            show: true,
+            margin: 2,
+            formatter: (value) => {
+              return parseFloat(value).toFixed(4)
+            },
+            textStyle: {
+              color: c3
+            },
+          },
+          lineStyle: {
+            width: 1.5,
+            color: c3
+          }
+        },
+        min: zRange[0],
+        max: zRange[1]
+      },
+      grid3D: {
+        viewControl: {
+          distance: 220
+        },
+        axisPointer: {
+          lineStyle: {
+            color: c2
+          },
+          label: {
+            show: true
+          }
+        },
+      },
+      animation: false,
+      series: [{
+          name: 'Call',
+          type: 'surface',
+          itemStyle: {
+            color: "#FF0000",
+            opacity: 0.3
+          },
+          data: data.CallData
+        },
+        {
+          name: 'Put',
+          type: 'surface',
+          itemStyle: {
+            color: "#00FF00",
+            opacity: 0.3
+          },
+          data: data.PutData
+        }
+      ],
+    };
+    myChart.setOption(option);
+    window.onresize = () => {
+      myChart.resize();
+    }
+    setInterval(() => {
+      const width = myChart.getWidth();
+      const docWidth = document.documentElement.offsetWidth;
+      if (width != docWidth) {
+        myChart.resize();
+      }
+    }, 200)
+  });
+
+  </script>
+</body>
+
+</html>

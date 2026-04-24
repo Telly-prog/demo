@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>018-game-2048</title>
+    <!-- Vue -->
+    <script type="text/javascript" src="https://cdn.staticfile.org/vue/2.6.10/vue.min.js"></script>
+    <!-- ElementUI -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.staticfile.org/element-ui/2.7.2/theme-chalk/index.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 700px;
+            margin: 20px auto;
+            display: flex;
+        }
+
+        .game-wrapper {
+            width: 450px;
+            height: 450px;
+            background: #bbafa3;
+            position: relative;
+            cursor: grab;
+            border-radius: 4px;
+            /* -webkit-user-drag: none; */
+        }
+
+        #app {
+            position: relative;
+        }
+
+        .box {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            line-height: 100px;
+            text-align: center;
+            border-radius: 4px;
+        }
+
+        .action {
+            margin: 20px auto;
+            width: 700px;
+
+        }
+
+        .ai-switch {
+            margin-left: 20px;
+        }
+
+        .show-data {
+            margin-left: 10px;
+        }
+
+        .label {
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .data {
+            color: #2700ff;
+            margin-top: 5px;
+            font-size: 24px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="container">
+            <div draggable="true" id="boxWrapper" class="game-wrapper">
+                <template v-for="(rowLine,row) in renderMatrix">
+                    <template v-for="(number,col) in (rowLine ||[])">
+                        <div class="box" :style="getStyle(row,col,number)">{{number}}</div>
+                    </template>
+                </template>
+            </div>
+            <div class="show-data">
+                <div>
+                    <div class="label">当前步数：</div>
+                    <div class="data"> {{step}}</div>
+
+                    </el-slider>
+                </div>
+                <div>
+                    <div class="label">模拟次数：</div>
+                    <div class="data"> {{this.simulationNumber}}</div>
+                    <el-slider v-model="simulationNumber" :min="50" :max="200"></el-slider>
+                </div>
+                <div>
+                    <div class="label">模拟间隔：</div>
+                    <div class="data">{{this.AI_timeout}}ms</div>
+                    <el-slider v-model="AI_timeout" :min="100" :max="1000"></el-slider>
+                </div>
+            </div>
+        </div>
+        <div class="action">
+            <el-button type="primary" class="btn" @click="restart">重新开始</el-button>
+            <el-switch @change="changeSwitch" class="ai-switch" v-model="ai" active-text="人工智能" inactive-text="手动">
+            </el-switch>
+        </div>
+</body>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script src="./util.js"></script>
+<script>
+
+    new Vue({
+        el: "#app",
+        data: {
+            step: 0,
+            gap: 10,
+            boxWidth: 100,
+            boxMatrix: [[], [], [], []],//二维数组
+            ai: false,
+            colorMap: {
+                default: ['#d7cec7', '#ccc'],
+                2: ['#f1e6e0', '#666'],
+                4: ['#eedfcc', '#666'],
+                8: ['#f4b57f', '#fff'],
+                16: ['#f3a06b', '#fff'],
+                32: ['#f08f6c', '#fff'],
+                64: ['#f65e39', '#fff'],
+                128: ['#f2ca7a', '#fff'],
+                256: ['#d9bf54', '#fff'],
+                512: ['#f7b365', '#fff'],
+                1024: ['#cea828', '#fff'],
+                2048: ['#eec22c', '#fff'],
+                4096: ['#396d60', '#fff'],
+                other: ['#fd1e1f', '#fff'],
+            },
+            simulationNumber: 4 * 50, //总模拟数
+            AI_timeout: 1000,
+        },
+        mounted() {
+            this.initGame();
+            this.initMatrix();
+            this.bindDrag();
+        },
+        methods: {
+            aiMove() {
+                const bestPosition = this.getBestMovation(this.boxMatrix);
+                this.move(bestPosition);
+                this.addBox(this.boxMatrix);
+            },
+            getBestMovation(matrix) {
+                const moveNumbers = {};
+                const positions = [LEFT, RIGHT, UP, DOWN];
+                for (let direction of positions) {
+                    moveNumbers[direction] = 0;
+                    for (let s = 0; s < this.simulationNumber / 4; s++) {
+                        let nextMatrix = this.getNextMatrix(matrix, direction);
+                        //下一步之后的模拟
+                        let gameover = false;
+                        let step_number = 0;
+                        do {
+                            step_number++;
+                            nextMatrix = this.getNextMatrix(nextMatrix, positions[Math.floor(Math.random() * 4)]);
+                            gameover = this.addBox(nextMatrix) == 'over';
+                        } while (!gameover)
+                        moveNumbers[direction] += step_number;
+                    }
+                }
+                const sortArray = [];
+                for (let direction of positions) {
+                    sortArray[positions.indexOf(direction)] = [moveNumbers[direction], direction];
+                }
+                sortArray.sort((a, b) => b[0] - a[0]);
+                return sortArray[0][1]
+            },
+            changeSwitch(ai) {
+                this.aiFlag = ai;
+                if (ai) {
+                    const requestAnimationAIMove = () => {
+                        requestAnimationFrame(() => {
+                            this.aiMoveTimeout = setTimeout(() => {
+                                if (!this.aiFlag) return;
+                                this.aiMove();
+                                requestAnimationAIMove()
+                            }, this.AI_timeout)
+                        });
+                    }
+                    requestAnimationAIMove();
+                } else {
+                    clearTimeout(this.aiMoveTimeout);
+                }
+            },
+            initGame() {
+                this.step = 0;
+            },
+            initMatrix() {
+                this.boxMatrix = [[], [], [], []];
+                this.addBox(this.boxMatrix);
+            },
+            addBox(matrix) {
+                const [x, y, n] = randomBox(matrix);
+                if (x == 'over') return 'over'
+                matrix[x][y] = n;
+            },
+            getNextMatrix(currentMatrix, direction) {
+                let nextMatrix = JSON.parse(JSON.stringify(currentMatrix));
+                let rotations;
+                switch (direction) {
+                    case LEFT:
+                        rotations = [];
+                        break;
+                    case UP:
+                        rotations = [LEFT, RIGHT];
+                        break;
+                    case RIGHT:
+                        rotations = [DOWN, DOWN];
+                        break;
+                    case DOWN:
+                        rotations = [RIGHT, LEFT];
+                        break;
+                }
+                if (rotations[0]) {
+                    nextMatrix = rotateMatrix(nextMatrix, rotations[0]);
+
+                }
+                // debugger;
+                // // 合数
+                nextMatrix = mergeMatrix(nextMatrix);
+                if (rotations[1]) {
+                    nextMatrix = rotateMatrix(nextMatrix, rotations[1]);
+                }
+                return nextMatrix;
+            },
+            move(direction) {
+                this.step++;
+                this.boxMatrix = this.getNextMatrix(this.boxMatrix, direction)
+            },
+            restart() {
+                this.initGame();
+                this.initMatrix();
+            },
+            bindDrag() {
+                const wapDom = document.getElementById('boxWrapper');
+                wapDom.addEventListener('dragstart', e => {
+                    this.dragImage = this.dragImage || new Image();
+                    e.dataTransfer.setDragImage(this.dragImage, 0, 0);
+                    this.dragStartX = e.x;
+                    this.dragStartY = e.y;
+                });
+                wapDom.addEventListener('dragend', e => {
+                    const { x, y } = e;
+                    const offsetX = x - this.dragStartX;
+                    const offsetY = y - this.dragStartY;
+                    let direction;
+                    if (Math.abs(offsetX) >= Math.abs(offsetY)) {
+                        direction = offsetX < 0 ? LEFT : RIGHT
+                    } else {
+                        direction = offsetY < 0 ? UP : DOWN
+                    }
+                    this.move(direction);
+                    this.addBox(this.boxMatrix);
+                })
+            },
+            getStyle(row, col, number) {
+                const colorItem = this.colorMap[number || 'default'] || this.colorMap['other'];
+                return {
+                    top: row * (this.boxWidth + this.gap) + this.gap + 'px',
+                    left: col * (this.boxWidth + this.gap) + this.gap + 'px',
+                    background: colorItem[0],
+                    color: colorItem[1],
+                    fontSize: 120 / Math.max(2, (number + '').length) + 'px'
+                }
+            }
+        },
+        computed: {
+            renderMatrix() {
+                return this.boxMatrix.map(row => {
+                    const row_ = [...row];
+                    row_.length = 4;
+                    return row_;
+                })
+            }
+        }
+    })
+</script>
+
+</html>

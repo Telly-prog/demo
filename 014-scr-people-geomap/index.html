@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>scr_people_geomap</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <!-- JQuery -->
+  <script type="text/javascript" src="https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js"></script>
+  <!-- Echarts -->
+  <script type="text/javascript" src="https://cdn.staticfile.org/echarts/4.2.1/echarts.min.js"></script>
+  <script type="text/javascript" src="./echarts-theme.js"></script>
+  <!-- Moment -->
+  <script type="text/javascript" src="https://cdn.staticfile.org/moment.js/2.24.0/moment.min.js"></script>
+  <style>
+  </style>
+</head>
+
+<body>
+  <div style="position: relative;width: 1000px;height: 600px;">
+    <div id="scPeopleGeoMapCanvasContaner" style="width: 100%;height:100%"></div>
+  </div>
+</body>
+<script>
+$(document).ready(function() {
+  $.getJSON('data.json', function(data) {
+    showFigure(data);
+  })
+});
+
+function showFigure(tableData) {
+  var echData = (function(originData) {
+    //排序
+    originData.sort(function(a, b) {
+      return b.number - a.number;
+    });
+    var echDataObj = {};
+    for (var d of originData) {
+      var areaProv = d.area ? d.area.split('/')[0] : "";
+      var sIndex = areaProv.search('省');
+      if (sIndex != -1) {
+        areaProv = areaProv.substring(0, sIndex);
+      }
+      if (areaProv) echDataObj[areaProv] = parseInt((echDataObj[areaProv] || 0)) + parseInt(d.number);
+    }
+    var echDataArr = [];
+    var numberArr = [];
+    for (var d2 in echDataObj) {
+      echDataArr.push({
+        name: d2,
+        value: echDataObj[d2],
+      });
+      numberArr.push(echDataObj[d2]);
+    }
+    echDataArr = echDataArr.sort(function(a, b) { return (b.value - a.value); });
+    numberArr = numberArr.sort(function(a, b) { return b - a; });
+    return {
+      echDataArr: echDataArr,
+      numberArr: numberArr
+    };
+  })(tableData);
+  var myChart = echarts.init(document.getElementById('scPeopleGeoMapCanvasContaner'), 'walden');
+  $.get('chinaGeo.json', function(chinaJson) {
+    myChart.hideLoading();
+    echarts.registerMap('China', chinaJson);
+    var option = {
+      tooltip: {
+        trigger: 'item',
+        showDelay: 0,
+        transitionDuration: 0.2,
+        formatter: function(params) {
+          return (params.data ? (params.name + "：" + (params.data.value || params.data)) : "");
+        }
+      },
+      grid: [{
+        top: 20,
+        right: 50,
+        height: "50%",
+        width: "20%"
+      }],
+      visualMap: [{
+        right: 50,
+        min: echData.numberArr[echData.numberArr.length - 1],
+        max: echData.numberArr[0],
+        calculable: true
+      }],
+      yAxis: {
+        inverse: true,
+        show: false,
+        type: 'category',
+        data: function(echDataArr) {
+          var arr = [];
+          for (var i in echDataArr) {
+            arr.push(echDataArr[i].name);
+          }
+          return arr;
+        }(echData.echDataArr)
+      },
+      xAxis: {
+        show: false,
+        inverse: true,
+        type: 'value',
+      },
+      series: [ //
+        {
+          name: 'China',
+          type: 'map',
+          left: "20%",
+          zoom: 1,
+          roam: true,
+          map: 'China',
+          itemStyle: {
+            emphasis: { label: { show: true } }
+          },
+          // 文本位置修正
+          textFixed: {
+            Alaska: [20, -20]
+          },
+          data: echData.echDataArr
+        }, // 
+        {
+          label: {
+            show: true,
+            color: "#000",
+            formatter: function(params) {
+              return params.name + "（" + params.data + "）"
+            },
+            position: "left"
+          },
+          name: 'people',
+          type: 'bar',
+          data: echData.numberArr,
+          visualMap: false,
+        } //
+      ]
+    };
+    myChart.setOption(option);
+  });
+}
+</script>
+
+</html>

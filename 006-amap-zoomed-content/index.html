@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>006-amap-zoomed-content</title>
+  <!-- font-awesome -->
+  <link rel="stylesheet" type="text/css" href="https://cdn.staticfile.org/font-awesome/4.7.0/css/font-awesome.min.css">
+  <style> *{
+  margin: 0;
+  padding: 0;
+}
+#container{
+  position: relative;
+  min-width: 1200px;
+  max-width: 100%;
+  height: 700px;
+}
+#map{
+  width: 100%;
+  height: 100%;
+}
+/*circle*/
+.circle-content {
+  box-shadow: 0 2px 12px 1px rgba(51, 51, 51, 0.3);
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #F55A00;
+  opacity: .8;
+  color: #fff;
+  position: relative;
+}
+.circle-text {
+  width: 100%;
+  text-align: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 24px;
+}
+.circle-content:hover {
+  background: #F55A00;
+  opacity: 1;
+}
+.circle-content:hover .circle-text {
+  position: absolute;
+}
+.store-label-content {
+  position: relative;
+  display: inline-block;
+  height: 30px;
+  width: max-content;
+  -webkit-width: max-content;
+  line-height: 30px;
+  background: #F55A00;
+  opacity: .8;
+  border-radius: 5px;
+  padding: 0 10px;
+  transform: translate(-50%, 20px);
+}
+.store-label-content:hover {
+  opacity: 1;
+}
+.store-label-content .store-label-text {
+  color: #fff;
+}
+.store-label-content:after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  transform: translate(-50%, 0);
+  float: left;
+  width: 0;
+  height: 0;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #F55A00 transparent transparent transparent;
+}
+.store-content {
+  font-size: 24px
+}
+.expand-map {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 99;
+  color: #999;
+}
+.expand-map i {
+  cursor: pointer;
+  font-size: 42px;
+}
+.expand-map i:hover {
+  color: #888;
+}
+.map-expand-btn{
+  display: none;
+}
+.map-expand-btn.show{
+  display: block;
+}
+</style>
+</head>
+
+<body>
+  <div id="container">
+    <div id="map">
+      <div class="expand-map">
+        <div>
+          <i class="map-expand-btn fa fa-expand fa-lg"></i>
+          <i class="map-expand-btn fa fa-compress fa-lg"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- jquery -->
+  <script type="text/javascript" src="https://cdn.staticfile.org/jquery/3.3.1/jquery.min.js"></script>
+  <!-- AMAP-高德api-js -->
+  <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.14&key=5c30bc6412b4255b06b2a72427bcb82f&plugin=AMap.Geocoder,AMap.DistrictSearch"></script>
+  <!-- AMAP-高德ui-js -->
+  <script src="//webapi.amap.com/ui/1.0/main.js?v=1.0.11"></script>
+  <script>
+  $(document).ready(function() {
+    $.getJSON('data.json', function(data) {
+      initMap(data);
+      bindEvent(data);
+    })
+  });
+  //监听全屏切换
+  function bindEvent() {
+    let container = document.getElementById('container')
+    $('.map-expand-btn').on('click', function() {
+      if ($(this).hasClass('fa-expand')) {
+        launchIntoFullscreen(container)
+      } else {
+        exitFullscreen();
+      }
+    })
+    document.addEventListener("fullscreenchange", function(e) {
+      $('.map-expand-btn.show').removeClass('show').siblings().addClass('show')
+    });
+    document.addEventListener("mozfullscreenchange", function(e) {
+      $('.map-expand-btn.show').removeClass('show').siblings().addClass('show')
+    });
+    document.addEventListener("webkitfullscreenchange", function(e) {
+      $('.map-expand-btn.show').removeClass('show').siblings().addClass('show')
+    });
+    document.addEventListener("msfullscreenchange", function(e) {
+      $('.map-expand-btn.show').removeClass('show').siblings().addClass('show')
+    });
+  }
+
+  function initMap(data) {
+    let map = new AMap.Map("map", {
+      resizeEnable: true,
+      center: [112.975814, 28.200869],
+      zoom: 12
+    });
+    let geocoder = new AMap.Geocoder({
+      radius: 1000
+    });
+    let markerListRender;
+    let currentCity;
+    async function getMarker() {
+      data = await getRegeocodeCont(data, geocoder);
+      markerListRender = await getMarkerListRender(map);
+      renderMarker();
+      $('.map-expand-btn.fa-expand').addClass('show')
+    }
+    //同步获取区域数据列表（处理数据)
+    async function getDistrictList(list) {
+      let info = await getCity(map);
+      let districtListInfo = await searchDistrict({
+        level: 'city',
+        search: info.city,
+        subdistrict: 1
+      });
+      let lonlat = data.filter((item) => {
+        return item.regeocode && item.regeocode.addressComponent.city == info.city
+      })
+      if (districtListInfo.info == 'OK') {
+        let districtList_ = districtListInfo.districtList[0].districtList;
+        for (let district of districtList_) {
+          for (let item of lonlat) {
+            if (district.name == item.regeocode.addressComponent.district) {
+              district.count = district.count || 0;
+              district.count++;
+            }
+          }
+        }
+        return districtList_
+      } else {
+        console.log('districtList error', districtListInfo.info);
+        return []
+      };
+    }
+    //同步获取街道数据列表（处理数据)
+    async function getTownshipList(list) {
+      let info = await getCity(map);
+      let townshipListInfo = await searchDistrict({
+        level: 'city',
+        search: info.city,
+        subdistrict: 2
+      });
+      let lonlat = data.filter((item) => {
+        return item.regeocode && item.regeocode.addressComponent.city == info.city
+      })
+      if (townshipListInfo.info == 'OK') {
+        let townshipList_ = (function(districtList) {
+          let townshipList_ = [];
+          districtList.forEach(function(item) {
+            townshipList_ = townshipList_.concat(item.districtList)
+          })
+          return townshipList_;
+        })(townshipListInfo.districtList[0].districtList);
+        // 过滤边界
+        // let bounds = map.getBounds();
+        // let path = [
+        //   [bounds.northeast.lng, bounds.northeast.lat],
+        //   [bounds.northeast.lng, bounds.southwest.lat],
+        //   [bounds.southwest.lng, bounds.southwest.lat],
+        //   [bounds.southwest.lng, bounds.northeast.lat],
+        // ]
+        // townshipList_ = townshipList_.filter(function(item) {
+        //   let inRing = AMap.GeometryUtil.isPointInRing([item.center.lng, item.center.lat], path);
+        //   return inRing
+        // })
+        for (let township of townshipList_) {
+          for (let item of lonlat) {
+            if (township.name == item.regeocode.addressComponent.township) {
+              township.count = township.count || 0;
+              township.count++;
+            }
+          }
+        }
+        townshipList_ = townshipList_.filter((item) => item.count)
+        return townshipList_
+      } else return [];
+    }
+    //执行渲染
+    async function renderMarker() {
+      let zoom = map.getZoom();
+      if (zoom <= 12) {
+        /**
+         * 进行区县渲染
+         */
+        markerListRender.renderStore([]);
+        markerListRender.renderTownship([]);
+        let districtList = await getDistrictList(data);
+        markerListRender.renderDistrict(districtList);
+      } else if (zoom <= 13) {
+        /**
+         * 进行街道渲染
+         */
+        markerListRender.renderStore([]);
+        markerListRender.renderDistrict([]);
+        let townshipList = await getTownshipList(data);
+        markerListRender.renderTownship(townshipList);
+      } else {
+        /**
+         * 进行门店渲染
+         */
+        markerListRender.renderStore(data);
+        markerListRender.renderDistrict([]);
+        markerListRender.renderTownship([]);
+      }
+    };
+    async function moveend() {
+      let info = await getCity(map);
+      let city = info.city;
+      if (currentCity != city) {
+        currentCity = city;
+        renderMarker();
+      } else {}
+    }
+    getMarker();
+    // 监听移动,城市切换时进行重新处理行政区域数据并渲染
+    map.on('zoomend', renderMarker);
+    map.on('moveend', moveend)
+  }
+  //获取定位所在城市等信息
+  function getCity(map) {
+    return new Promise(function(resolve, reject) {
+      map.getCity(function(info) {
+        resolve(info)
+      });
+    })
+  }
+  /**
+   * @param  数据列表 list
+   * @param  高德获取行政区域插件对象 geocoder
+   * @return 填充了行政区域的数据
+   */
+  function getRegeocodeCont(list, geocoder) {
+    return new Promise(function(resolve, reject) {
+      let i = 0;
+      let length = list.length;
+      let districtCache = getLocalStorage('districtCache') || {};
+      for (let item of list) {
+        if (districtCache[item.id]) {
+          i++;
+          item.regeocode = districtCache[item.id];
+          check(i, list)
+        } else {
+          let lonlat = [item.lon, item.lat];
+          geocoder.getAddress(lonlat, function(status, result) {
+            i++;
+            if (status === 'complete' && result.regeocode) {
+              let regeocode = result.regeocode;
+              item.regeocode = regeocode;
+              districtCache[item.id] = regeocode;
+            } else {
+              console.log(result)
+            }
+            check(i, list)
+          });
+        }
+      }
+
+      function check(ind, data) {
+        if (ind == length) {
+          setLocalStorage('districtCache', districtCache);
+          resolve(data)
+        }
+      }
+    })
+  }
+  /**
+   * 不同等级搜索子行政区域
+   */
+  function searchDistrict({ level, search, subdistrict }) {
+    return new Promise((resolve, reject) => {
+      let districtSearch = new AMap.DistrictSearch({
+        level: level,
+        subdistrict: subdistrict,
+      })
+      districtSearch.search(search, function(status, result) {
+        resolve(result);
+      })
+    })
+  }
+  /**
+   * @param  {map}
+   * @return {[type]}
+   * 获取 标记渲染实例
+   */
+  function getMarkerListRender(map) {
+    return new Promise(function(resolve, reject) {
+      AMapUI.loadUI(['misc/MarkerList'], function(MarkerList) {
+        // 店铺标记序列===============
+        let storeMarkerList = new MarkerList({
+          map: map,
+          autoSetFitView: false,
+          selectedClassNames: 'selected',
+          getDataId: function(dataItem, index) {
+            return dataItem.id;
+          },
+          getPosition: function(dataItem) {
+            return [dataItem.lon, dataItem.lat];
+          },
+          getMarker: function(dataItem, context, recycledMarker) {
+            let tpl = // 
+              '<div class="store-label-content">' + //
+              '<div class="store-label-text">' + //
+              dataItem.name + '</div>'
+            '</div>';
+            let content = MarkerList.utils.template(tpl, {
+              dataItem: dataItem,
+            });
+            if (recycledMarker) {
+              recycledMarker.setContent(content);
+              return recycledMarker;
+            }
+            return new AMap.Marker({
+              content: content,
+            });
+          },
+          getInfoWindow: function(dataItem, context, recycledInfoWindow) {
+            let tpl = '<div style="display:flex;align-items: flex-start;"><img src=' + dataItem.img_url + ' style="width:50px;"><div style="width:200px;margin-left: 6px;"><p style="font-weight: 600;font-size: 14px;margin-bottom:6px;">' + dataItem.name + '</p><p style="margin-bottom: 6px;">' + dataItem.operator + ' ' + dataItem.contact_number + '</p><p>' + dataItem.address + '</p></div></div>';
+            let content = MarkerList.utils.template(tpl, {
+              dataItem: dataItem,
+              dataIndex: context.index
+            });
+            if (recycledInfoWindow) {
+              recycledInfoWindow.setContent(content);
+              return recycledInfoWindow;
+            }
+            return new AMap.InfoWindow({
+              offset: new AMap.Pixel(0, -23),
+              content: content
+            });
+          },
+        });
+        // 区县标记序列
+        let districtMarkerList = new MarkerList({
+          map: map,
+          autoSetFitView: false,
+          getDataId: function(dataItem, index) {
+            return dataItem.id;
+          },
+          getPosition: function(dataItem) {
+            return [dataItem.center.lng, dataItem.center.lat]
+          },
+          getInfoWindow: function(dataItem, context, recycledInfoWindow) {},
+          getMarker: function(dataItem, context, recycledMarker) {
+            let tpl = // 
+              '<div class="circle-content">' + //
+              '<div class="circle-text">' + //
+              dataItem.name + '<br/>' + (dataItem.count || 0) + '家' + //
+              '</div>'
+            '</div>';
+            let content = MarkerList.utils.template(tpl, {
+              dataItem: dataItem,
+            });
+            if (recycledMarker) {
+              recycledMarker.setContent(content);
+              return recycledMarker;
+            }
+            return new AMap.Marker({
+              content: content,
+            });
+          },
+        });
+        // 区域点击放大至街道 
+        districtMarkerList.on('markerClick', function(event, record) {
+          map.setZoom(13);
+        });
+        districtMarkerList.on('markerMouseover', function(event, record) {
+          record.marker.setTop(true)
+        });
+        // 街道标记序列
+        let townshipMarkerList = new MarkerList({
+          map: map,
+          autoSetFitView: false,
+          getDataId: function(dataItem, index) {
+            return dataItem.id;
+          },
+          getPosition: function(dataItem) {
+            return [dataItem.center.lng, dataItem.center.lat]
+          },
+          getInfoWindow: function(dataItem, context, recycledInfoWindow) {},
+          getMarker: function(dataItem, context, recycledMarker) {
+            let tpl = // 
+              '<div class="circle-content">' + //
+              '<div class="circle-text">' + //
+              dataItem.name + '<br/>' + (dataItem.count || 0) + '家' + //
+              '</div>'
+            '</div>';
+            let content = MarkerList.utils.template(tpl, {
+              dataItem: dataItem,
+            });
+            if (recycledMarker) {
+              recycledMarker.setContent(content);
+              return recycledMarker;
+            }
+            return new AMap.Marker({
+              content: content,
+            });
+          },
+        });
+        // 街道点击放大至店铺 
+        townshipMarkerList.on('markerClick', function(event, record) {
+          map.setZoom(14);
+        });
+        resolve({
+          renderStore: (data) => {
+            storeMarkerList.render(data);
+          },
+          renderDistrict: (data) => {
+            districtMarkerList.render(data);
+          },
+          renderTownship: (data) => {
+            townshipMarkerList.render(data);
+          },
+        })
+      });
+    })
+  }
+  /**
+   * locationStorage缓存封装 set
+   */
+  function setLocalStorage(name, data) {
+    localStorage.setItem('ld_' + name, JSON.stringify(data))
+  }
+  /**
+   * locationStorage缓存封装 get
+   */
+  function getLocalStorage(name) {
+    let data = localStorage.getItem('ld_' + name);
+    if (data) return JSON.parse(data);
+    return '';
+  }
+
+  function launchIntoFullscreen(element) {
+    var requestMethod = element.requestFullScreen || //W3C
+      element.webkitRequestFullScreen || //FireFox
+      element.mozRequestFullScreen || //Chrome等
+      element.msRequestFullScreen; //IE11
+    if (requestMethod) {
+      requestMethod.call(element);
+    } else if (typeof window.ActiveXObject !== "undefined") { //for Internet Explorer
+      var wscript = new ActiveXObject("WScript.Shell");
+      if (wscript !== null) {
+        wscript.SendKeys("{F11}");
+      }
+    }
+  }
+
+  function exitFullscreen() {
+    var exitMethod = document.exitFullscreen || //W3C
+      document.mozCancelFullScreen || //FireFox
+      document.webkitExitFullscreen || //Chrome等
+      document.webkitExitFullscreen; //IE11
+    if (exitMethod) {
+      exitMethod.call(document);
+    } else if (typeof window.ActiveXObject !== "undefined") { //for Internet Explorer
+      var wscript = new ActiveXObject("WScript.Shell");
+      if (wscript !== null) {
+        wscript.SendKeys("{F11}");
+      }
+    }
+  }
+
+  </script>
+</body>
+
+</html>

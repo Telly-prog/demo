@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>010-member-importance</title>
+</head>
+<style type="text/css">
+#svg {
+  width: 600px;
+  height: 450px;
+}
+.g-links {
+  fill: none;
+}
+.links {
+  stroke-width: 2px;
+  stroke: #ccc;
+}
+.g-tree {
+  transform: translate(600px, 40px) rotate(90deg);
+}
+.text-id {
+  transform: rotate(-90deg) translate(-5px, 5px);
+  fill: #fff;
+}
+.text-value {
+  transform: rotate(-90deg) translate(20px, 5px);
+  fill: #188eee;
+}
+.sum-text {
+  position: absolute;
+  top: 60px;
+  left: 500px;
+  color: #333;
+  font-size: 24px;
+}
+</style>
+<script type="text/javascript" src="../../assets/d3-lib/d3-v5.0.0.min.js"></script>
+
+<body>
+  <svg id="svg"></svg>
+  <div class="sum-text">sum: <span id="sum">0</span></div>
+  <script type="text/javascript">
+  // 员工重要性
+  // 元素含义：[[员工id],[员工重要程度],[员工直系下属(数组)]]
+  let input = [
+        [1, 14, [2, 3]],
+        [2, 10, [4, 5]], [3, 11, [6, 7, 8, 9]],
+        [4, 7, [10, 11]], [5, 5], [6, 7], [7, 8], [8, 6, [12]], [9, 8],
+        [10, 1], [11, 2], [12, 4]
+    ]
+  //转Map
+  let mapAllMember = ((input) => {
+    let map = {};
+    for (let item of input) {
+      map[item[0]] = { val: item[1], sub: item[2] }
+    }
+    return map;
+  })(input);
+  //d3适用的数据
+  let d3Data = ((map) => {
+    let data = [];
+    for (let id in map) {
+      let parentId;
+      for (let id2 in map) {
+        if (map[id2].sub && map[id2].sub.includes(parseInt(id))) {
+          parentId = id2;
+        }
+      }
+      data.push({
+        id: id,
+        parentId: parentId
+      })
+    }
+    // d3.stratify 处理关系数据=>层级数据
+    let root = d3.stratify()(data);
+    root.each((node) => {
+      node.importance = mapAllMember[node.id].val;
+    })
+    // d3.tree处理层级数据=>视图数据
+    let tree = d3.tree().size([600, 380]);
+    let treeD = tree(root);
+    return treeD;
+  })(mapAllMember);
+  /**
+   * 渲染数据成d3树状图 
+   */
+  let renderTree = (data) => {
+    let svg = d3.select('#svg');
+    let gTree = svg.append('g').attr('class', 'g-tree');
+    let gLinks = gTree.append('g').attr('class', 'g-links');
+    let gNode = gTree.append('g').attr('class', 'g-nodes');
+    //sum dom
+    let sum = document.getElementById('sum');
+    //links
+    gLinks.selectAll('path').data(data.links()).enter().append('path').attr('class', 'links').attr("d", d3.linkHorizontal().x(d => d.y).y(d => d.x));
+    let nodes = gNode.selectAll('g').data(data.descendants()).enter().append('g').attr("transform", d => `translate(${d.y},${d.x})`);
+    //node circle
+    nodes.append("circle").attr('class', d => 'circle-' + d.id).attr("fill", d => "#ccc").attr("r", 30);
+    //node text-id
+    nodes.append("text").attr('class', 'text-id').text(d => d.id)
+    //node text-val
+    nodes.append("text").attr('class', 'text-value').text(d => '[' + d.importance + ']');
+    //event
+    nodes.on('mouseover', function(d) {
+      let descendants = d.descendants();
+      for (let item of descendants) d3.select('.circle-' + item.id).attr('fill', '#80b6e2');
+      sum.innerText = findSumImportance(d.id);
+    }).on('mouseleave', function(d) {
+      let descendants = d.descendants();
+      for (let item of descendants) d3.select('.circle-' + item.id).attr('fill', '#ccc')
+      sum.innerText = 0;
+    })
+  };
+  renderTree(d3Data)
+  // 计算总重要程度
+  let findSumImportance = (id) => {
+    let imp = mapAllMember[id].val;
+    let sub = [];
+    let ids = [id];
+    while ((sub = fundSubordinate(ids)).length) {
+      for (let id of sub) {
+        imp += mapAllMember[id].val;
+      }
+      ids = sub;
+    }
+    return imp;
+  }
+  /**
+   * ids数组 寻找所有成员直系下属ids
+   * @param  {[type]} ids [被寻找成员id数组]
+   * @return {[type]}     [所有直系下属id数组]
+   */
+  let fundSubordinate = (ids) => {
+    let sub = [];
+    for (let id of ids) {
+      if (mapAllMember[id].sub) {
+        sub = sub.concat(mapAllMember[id].sub);
+      }
+    }
+    return sub;
+  }
+  </script>
+</body>
+
+</html>

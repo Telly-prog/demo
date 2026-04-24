@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>017-pi-approximate-valuee</title>
+    <!-- Vue -->
+    <script type="text/javascript" src="https://cdn.staticfile.org/vue/2.6.10/vue.min.js"></script>
+    <!-- ElementUI -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.staticfile.org/element-ui/2.7.2/theme-chalk/index.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            display: flex;
+            margin-top: 20px;
+        }
+
+        #app {
+            position: relative;
+            width: 600px;
+            margin: 0 auto;
+        }
+
+        .point_number_title {
+            margin-left: 20px;
+        }
+
+        .input {
+            width: 200px;
+        }
+
+        .input,
+        .btn {
+            display: inline-block;
+        }
+
+        .show-data {}
+
+        .label {
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .data {
+            margin-top: 5px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="container">
+            <canvas :width="width+padding*2" :height="height+padding*2" id="canvas">
+            </canvas>
+            <div class="show-data">
+                <div>
+                    <div class="label">当前点数：</div>
+                    <div class="data">{{current_number}}</div>
+                </div>
+                <div>
+                    <div class="label"> 距离&lt;R的点数：</div>
+                    <div class="data">{{inrange_number}}</div>
+                </div>
+                <div>
+                    <div class="label">计算PI值：</div>
+                    <div class="data">{{calculate_pi}}</div>
+                </div>
+                <div>
+                    <div class="label">误差：</div>
+                    <div class="data">{{dis_value}}</div>
+                </div>
+                <div>
+                    <div class="label">误差位：</div>
+                    <div class="data">{{dis_value_pos}}</div>
+                </div>
+            </div>
+        </div>
+        <span class="point_number_title">采样点个数：</span>
+        <el-input class="input" type="number" v-model="point_number">
+        </el-input>
+        <el-button type="primary" class="btn" @click="restart">重新开始</el-button>
+    </div>
+</body>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data: {
+            point_number: 30000,
+            current_number: 0,
+            width: 420,
+            height: 420,
+            padding: 20,
+            inrange_number: 0,
+        },
+        mounted() {
+            this.initCanvas();
+        },
+        computed: {
+            r() {
+                return this.width / 2;
+            },
+            dis_value() {
+                return Math.abs(Math.PI - this.calculate_pi);
+            },
+            dis_value_pos() {
+                return ((this.dis_value + '').match(/0.0+?[1-9]/) || [])[0] || '';
+            },
+            calculate_pi() {
+                if (this.current_number && this.inrange_number) {
+                    return this.inrange_number / this.current_number * 4;
+                }
+                return 0
+            }
+        },
+        methods: {
+            clearData() {
+                this.current_number = 0;
+                this.inrange_number = 0;
+            },
+            /*重新绘制*/
+            restart() {
+                this.clearData();
+                this.drawFrame();
+                this.ctx.fillStyle = "red";
+                this.drawInterval = setInterval(() => {
+                    this.current_number++;
+                    const pos = [Math.random() * this.width, Math.random() * this.height];
+
+                    let inRange = false;
+                    if (this.getDistance2Center(pos) <= this.r) {
+                        this.inrange_number++;
+                        inRange = true;
+                    }
+                    this.drawPoint(pos, inRange);
+                    if (this.current_number == this.point_number) clearInterval(this.drawInterval)
+                }, 0)
+
+            },
+            /*获取 点到中心距离*/
+            getDistance2Center([x, y]) {
+                const a = Math.pow((this.r - x), 2);
+                const b = Math.pow((this.r - y), 2);
+                const c = Math.pow((a + b), 1 / 2);
+                return c
+            },
+            /*绘制点*/
+            drawPoint([x, y], inRange) {
+                const ctx = this.ctx;
+                ctx.beginPath();
+                ctx.fillStyle = inRange ? '#188eee' : 'red';
+                ctx.arc(x + this.padding, y + this.padding, 1, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.closePath();
+            },
+            /*初始化*/
+            initCanvas() {
+                this.canvas = this.canvas || document.getElementById('canvas');
+                this.ctx = this.ctx || this.canvas.getContext('2d');
+                this.drawFrame();
+            },
+            /*绘制外层图形*/
+            drawFrame() {
+                const ctx = this.ctx;
+                ctx.clearRect(0, 0, this.width + this.padding * 2, this.height + this.padding * 2);
+                ctx.strokeStyle = "#666";
+                ctx.strokeWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.r + this.padding, this.r + this.padding, this.r, 0, Math.PI * 2, true);
+                ctx.stroke();
+                ctx.closePath();
+                ctx.beginPath();
+                ctx.arc(this.r + this.padding, this.r + this.padding, 1, 0, Math.PI * 2, true);
+                ctx.stroke();
+                ctx.strokeRect(this.padding, this.padding, this.width, this.height)
+            }
+        }
+    })
+</script>
+
+</html>
